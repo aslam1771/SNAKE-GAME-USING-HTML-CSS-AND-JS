@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Snake Game</title>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        background-color: #333;
+        font-family: Arial, sans-serif;
+      }
+
+      .game-container {
+        text-align: center;
+      }
+
+      canvas {
+        border: 2px solid white;
+        background-color: black;
+      }
+
+      .score {
+        color: white;
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+
+      .game-over {
+        color: red;
+        font-size: 32px;
+        margin-top: 10px;
+      }
+
+      .instructions {
+        color: white;
+        margin-top: 10px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="game-container">
+      <div class="score">Score: <span id="score">0</span></div>
+      <canvas id="canvas" width="400" height="400"></canvas>
+      <div class="game-over" id="gameOver" style="display: none">
+        Game Over! Press Space to Restart
+      </div>
+      <div class="instructions">Use arrow keys to control the snake</div>
+    </div>
+
+    <script>
+      var cvs = document.getElementById("canvas").getContext("2d");
+      var scoreElement = document.getElementById("score");
+      var gameOverElement = document.getElementById("gameOver");
+
+      var sposx = 80;
+      var sposy = 80;
+      var nposx = 20; // Start moving right
+      var nposy = 0;
+      var fposx = 140;
+      var fposy = 140;
+      var snaketail = [{ x: sposx, y: sposy }]; // Initial tail with head
+      var snakesize = 1;
+      var score = 0;
+      var gameRunning = true;
+      var gameInterval;
+
+      // onload function
+      window.onload = function () {
+        document.addEventListener("keydown", inputcontrol);
+        gameInterval = setInterval(maingame, 150); // 150ms for good speed
+      };
+
+      // main game function
+      function maingame() {
+        if (!gameRunning) return;
+
+        // move snake
+        sposx += nposx;
+        sposy += nposy;
+
+        // wrap around boundaries
+        if (sposx >= 400) sposx = 0;
+        if (sposy >= 400) sposy = 0;
+        if (sposx < 0) sposx = 380;
+        if (sposy < 0) sposy = 380;
+
+        // check collision with self
+        for (var i = 0; i < snaketail.length; i++) {
+          if (sposx == snaketail[i].x && sposy == snaketail[i].y) {
+            gameOver();
+            return;
+          }
+        }
+
+        // background
+        cvs.fillStyle = "black";
+        cvs.fillRect(0, 0, 400, 400);
+
+        // grid lines
+        cvs.beginPath();
+        cvs.strokeStyle = "#333";
+        cvs.lineWidth = 1;
+        for (var cl = 0; cl <= 400; cl += 20) {
+          cvs.moveTo(cl, 0);
+          cvs.lineTo(cl, 400);
+        }
+        for (var rl = 0; rl <= 400; rl += 20) {
+          cvs.moveTo(0, rl);
+          cvs.lineTo(400, rl);
+        }
+        cvs.stroke();
+
+        // check if snake eats food
+        if (sposx == fposx && sposy == fposy) {
+          snakesize++;
+          score += 10;
+          scoreElement.textContent = score;
+          // Generate new food position
+          do {
+            fposx = Math.floor(Math.random() * 20) * 20;
+            fposy = Math.floor(Math.random() * 20) * 20;
+          } while (isFoodOnSnake()); // Make sure food doesn't spawn on snake
+        }
+
+        // update snake tail
+        snaketail.push({ x: sposx, y: sposy });
+        while (snaketail.length > snakesize) {
+          snaketail.shift();
+        }
+
+        // draw snake
+        cvs.fillStyle = "lime";
+        for (var i = 0; i < snaketail.length; i++) {
+          if (i === snaketail.length - 1) {
+            // Draw head differently
+            cvs.fillStyle = "yellow";
+          } else {
+            cvs.fillStyle = "lime";
+          }
+          cvs.fillRect(snaketail[i].x, snaketail[i].y, 18, 18);
+        }
+
+        // draw food
+        cvs.fillStyle = "red";
+        cvs.fillRect(fposx, fposy, 18, 18);
+      }
+
+      // Check if food spawns on snake
+      function isFoodOnSnake() {
+        for (var i = 0; i < snaketail.length; i++) {
+          if (fposx == snaketail[i].x && fposy == snaketail[i].y) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      // Game over function
+      function gameOver() {
+        gameRunning = false;
+        gameOverElement.style.display = "block";
+      }
+
+      // Restart game
+      function restartGame() {
+        sposx = 80;
+        sposy = 80;
+        nposx = 20;
+        nposy = 0;
+        fposx = 140;
+        fposy = 140;
+        snaketail = [{ x: sposx, y: sposy }];
+        snakesize = 1;
+        score = 0;
+        scoreElement.textContent = score;
+        gameRunning = true;
+        gameOverElement.style.display = "none";
+      }
+
+      // input control
+      function inputcontrol(e) {
+        if (!gameRunning && e.keyCode === 32) {
+          // Space key to restart
+          restartGame();
+          return;
+        }
+
+        if (!gameRunning) return;
+
+        switch (e.keyCode) {
+          case 38: // up
+            if (nposy != 20) {
+              // Can't go up if currently going down
+              nposx = 0;
+              nposy = -20;
+            }
+            break;
+          case 40: // down
+            if (nposy != -20) {
+              // Can't go down if currently going up
+              nposx = 0;
+              nposy = 20;
+            }
+            break;
+          case 39: // right
+            if (nposx != -20) {
+              // Can't go right if currently going left
+              nposx = 20;
+              nposy = 0;
+            }
+            break;
+          case 37: // left
+            if (nposx != 20) {
+              // Can't go left if currently going right
+              nposx = -20;
+              nposy = 0;
+            }
+            break;
+        }
+      }
+    </script>
+  </body>
